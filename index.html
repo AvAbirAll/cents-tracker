@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CENT-S Seat Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #020b14;
+    --surface: #040f1c;
+    --panel: #071828;
+    --border: #0a3a5c;
+    --cyan: #00d4ff;
+    --cyan2: #00ffcc;
+    --orange: #ff6b2b;
+    --text: #c8e8f8;
+    --muted: #4a7a9b;
+    --green: #00ff88;
+    --red: #ff3366;
+    --yellow: #ffcc00;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);
+    background-size:40px 40px;
+    animation:gridMove 20s linear infinite;
+    pointer-events:none; z-index:0;
+  }
+  @keyframes gridMove { to { transform:translateY(40px); } }
+  body::after {
+    content:''; position:fixed; inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+    pointer-events:none; z-index:0;
+  }
+  .container { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:20px; }
+
+  /* HEADER */
+  header { text-align:center; padding:50px 0 24px; }
+  .logo-wrap { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:10px; }
+  .logo-ring {
+    width:52px; height:52px; border:2px solid var(--cyan); border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    animation:pulseRing 2s ease-in-out infinite; position:relative;
+  }
+  .logo-ring::before {
+    content:''; position:absolute; inset:5px;
+    border:1px solid var(--cyan2); border-radius:50%;
+    animation:spin 4s linear infinite;
+  }
+  @keyframes pulseRing {
+    0%,100% { box-shadow:0 0 0 0 rgba(0,212,255,0.4),0 0 20px rgba(0,212,255,0.2); }
+    50%      { box-shadow:0 0 0 8px rgba(0,212,255,0),0 0 30px rgba(0,212,255,0.4); }
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .logo-icon { font-size:22px; }
+  h1 {
+    font-family:'Orbitron',sans-serif;
+    font-size:clamp(1.5rem,5vw,2.8rem); font-weight:900;
+    background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text; letter-spacing:4px; text-transform:uppercase;
+  }
+  .subtitle { font-size:.95rem; color:var(--muted); letter-spacing:3px; margin-top:6px; text-transform:uppercase; }
+  .subtitle span { color:var(--orange); }
+
+  /* STATUS BAR */
+  .status-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:12px 20px; margin:16px 0; font-size:.82rem; letter-spacing:1px;
+    flex-wrap:wrap; gap:8px;
+  }
+  .status-left { display:flex; align-items:center; gap:8px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:var(--muted); flex-shrink:0; }
+  .dot.active  { background:var(--green); animation:blink 1s ease-in-out infinite; }
+  .dot.warning { background:var(--yellow); }
+  .dot.error   { background:var(--red); }
+  @keyframes blink {
+    0%,100% { opacity:1; box-shadow:0 0 6px var(--green); }
+    50%      { opacity:.5; box-shadow:none; }
+  }
+  .mono { font-family:'Orbitron',sans-serif; color:var(--cyan); font-size:.75rem; }
+
+  /* PANEL */
+  .panel {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:28px; margin:14px 0;
+    position:relative; overflow:hidden;
+  }
+  .panel::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg,transparent,var(--cyan),var(--cyan2),transparent);
+  }
+  .panel-title {
+    font-family:'Orbitron',sans-serif; font-size:.72rem; letter-spacing:3px;
+    color:var(--muted); text-transform:uppercase; margin-bottom:20px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel-title::before { content:''; display:block; width:4px; height:14px; background:var(--cyan); border-radius:2px; }
+
+  /* STEPS */
+  .step {
+    display:flex; gap:14px; align-items:flex-start;
+    padding:14px; border-radius:8px;
+    background:var(--surface); border:1px solid var(--border);
+    margin-bottom:10px; animation:fadeIn .4s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .step-num { font-family:'Orbitron',sans-serif; font-size:1.2rem; color:var(--cyan); min-width:28px; font-weight:900; }
+  .step-title { font-size:.92rem; font-weight:600; color:var(--text); margin-bottom:3px; }
+  .step-desc { font-size:.8rem; color:var(--muted); line-height:1.5; }
+  .step-desc a { color:var(--cyan); }
+  .step-desc code { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.2); padding:2px 6px; border-radius:3px; font-family:'Orbitron',sans-serif; font-size:.72rem; color:var(--cyan2); }
+
+  /* INPUT */
+  .input-group { margin-bottom:18px; }
+  label { display:block; font-size:.8rem; letter-spacing:2px; color:var(--muted); margin-bottom:7px; text-transform:uppercase; }
+  input[type=text] {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    border-radius:6px; padding:14px 16px; color:var(--cyan);
+    font-family:'Orbitron',sans-serif; font-size:.9rem; letter-spacing:2px;
+    outline:none; transition:border-color .3s,box-shadow .3s;
+  }
+  input[type=text]:focus { border-color:var(--cyan); box-shadow:0 0 16px rgba(0,212,255,.15); }
+  input.valid   { border-color:var(--green); }
+  input.invalid { border-color:var(--red); }
+  .hint { font-size:.76rem; color:var(--muted); margin-top:7px; line-height:1.5; }
+  .hint a { color:var(--cyan); text-decoration:none; }
+
+  /* PREFS */
+  .pref-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .pref-chip {
+    flex:1; min-width:110px; border:1px solid var(--border); border-radius:8px;
+    padding:14px 10px; cursor:pointer; transition:all .3s; user-select:none;
+    text-align:center; position:relative;
+  }
+  .pref-chip.selected { border-color:var(--cyan); background:rgba(0,212,255,.07); box-shadow:0 0 12px rgba(0,212,255,.1); }
+  .pref-chip-label { font-family:'Orbitron',sans-serif; font-size:.75rem; letter-spacing:2px; color:var(--text); }
+  .pref-chip.selected .pref-chip-label { color:var(--cyan); }
+  .pref-chip-desc { font-size:.72rem; color:var(--muted); margin-top:3px; }
+  .checkmark { position:absolute; top:7px; right:7px; width:15px; height:15px; border-radius:50%; background:var(--cyan); font-size:9px; display:flex; align-items:center; justify-content:center; color:#000; opacity:0; transition:opacity .3s; font-weight:900; }
+  .pref-chip.selected .checkmark { opacity:1; }
+
+  /* BUTTON */
+  .btn { width:100%; padding:17px; border:none; border-radius:8px; font-family:'Orbitron',sans-serif; font-size:.9rem; font-weight:700; letter-spacing:4px; text-transform:uppercase; cursor:pointer; transition:all .3s; position:relative; overflow:hidden; }
+  .btn-primary { background:linear-gradient(135deg,#00a8cc,#00d4ff); color:#000; box-shadow:0 0 30px rgba(0,212,255,.3); }
+  .btn-primary:hover { box-shadow:0 0 50px rgba(0,212,255,.5); transform:translateY(-2px); }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+  .btn-primary::before { content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:linear-gradient(45deg,transparent,rgba(255,255,255,.15),transparent); transform:rotate(45deg) translateX(-100%); transition:transform .5s; }
+  .btn-primary:hover::before { transform:rotate(45deg) translateX(100%); }
+  .btn-stop { background:transparent; border:1px solid var(--red); color:var(--red); margin-top:10px; padding:11px; font-size:.75rem; letter-spacing:3px; }
+  .btn-stop:hover { background:rgba(255,51,102,.1); }
+
+  /* BOT BOX */
+  .bot-box {
+    background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(0,255,204,.03));
+    border:1px solid rgba(0,212,255,.3); border-radius:10px;
+    padding:20px; text-align:center; margin-top:4px;
+  }
+  .bot-box-title { font-family:'Orbitron',sans-serif; font-size:.72rem; letter-spacing:2px; color:var(--cyan); margin-bottom:7px; }
+  .bot-box-desc { font-size:.83rem; color:var(--muted); margin-bottom:14px; line-height:1.5; }
+  .tg-btn { display:inline-block; background:#0088cc; color:#fff; padding:11px 22px; border-radius:8px; font-family:'Orbitron',sans-serif; font-size:.75rem; letter-spacing:2px; text-decoration:none; transition:all .3s; }
+  .tg-btn:hover { background:#0099dd; box-shadow:0 0 18px rgba(0,136,204,.4); }
+
+  /* STATS ROW */
+  .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+  .stat-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px; text-align:center; }
+  .stat-val { font-family:'Orbitron',sans-serif; font-size:1.4rem; font-weight:900; color:var(--cyan); line-height:1; margin-bottom:4px; }
+  .stat-lbl { font-size:.65rem; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; }
+
+  /* SEAT CARDS */
+  .seats-grid { display:grid; gap:10px; margin-top:4px; }
+  .seat-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:14px 16px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    animation:fadeIn .4s ease;
+  }
+  .seat-card.available { border-color:var(--green); background:rgba(0,255,136,.04); animation:glowGreen 2s ease-in-out infinite,fadeIn .4s ease; }
+  @keyframes glowGreen { 0%,100%{box-shadow:0 0 8px rgba(0,255,136,.2)} 50%{box-shadow:0 0 22px rgba(0,255,136,.4)} }
+  .seat-info { flex:1; min-width:0; }
+  .seat-format { font-family:'Orbitron',sans-serif; font-size:.65rem; letter-spacing:2px; margin-bottom:3px; }
+  .seat-format.uni  { color:var(--orange); }
+  .seat-format.home { color:var(--cyan2); }
+  .seat-uni { font-size:.9rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .seat-meta { font-size:.72rem; color:var(--muted); margin-top:2px; }
+  .book-btn { display:inline-block; background:var(--green); color:#000; border:none; border-radius:5px; padding:7px 12px; font-family:'Orbitron',sans-serif; font-size:.6rem; font-weight:700; letter-spacing:1px; cursor:pointer; text-decoration:none; margin-top:7px; transition:all .2s; }
+  .book-btn:hover { background:#00ffaa; box-shadow:0 0 12px rgba(0,255,136,.5); }
+  .seat-right { text-align:right; flex-shrink:0; }
+  .seat-count { font-family:'Orbitron',sans-serif; font-size:1.5rem; font-weight:900; color:var(--green); line-height:1; }
+  .seat-label { font-size:.62rem; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+  .no-seats { text-align:center; padding:36px; color:var(--muted); font-size:.82rem; letter-spacing:2px; }
+  .no-seats .icon { font-size:2rem; margin-bottom:8px; }
+
+  /* LOG */
+  .alert-log { max-height:200px; overflow-y:auto; margin-top:4px; }
+  .alert-log::-webkit-scrollbar { width:4px; }
+  .alert-log::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  .log-entry { display:flex; gap:10px; align-items:center; padding:7px 12px; border-radius:4px; font-size:.76rem; margin-bottom:3px; animation:fadeIn .3s ease; }
+  .log-entry.found { background:rgba(0,255,136,.05); border-left:2px solid var(--green); }
+  .log-entry.info  { background:rgba(0,212,255,.04); border-left:2px solid var(--cyan); }
+  .log-entry.err   { background:rgba(255,51,102,.04); border-left:2px solid var(--red); }
+  .log-time { font-family:'Orbitron',sans-serif; font-size:.62rem; color:var(--muted); min-width:58px; }
+  .log-msg  { color:var(--text); }
+
+  /* TOAST */
+  .toast {
+    position:fixed; bottom:20px; right:20px;
+    background:var(--panel); border:1px solid var(--green);
+    border-radius:10px; padding:16px 20px; max-width:300px;
+    box-shadow:0 0 30px rgba(0,255,136,.2); z-index:999;
+    display:none; animation:slideUp .4s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .toast-title { font-family:'Orbitron',sans-serif; font-size:.68rem; color:var(--green); letter-spacing:2px; margin-bottom:5px; }
+  .toast-body  { font-size:.82rem; color:var(--text); line-height:1.4; }
+
+  /* TICKER */
+  .ticker { overflow:hidden; border-top:1px solid var(--border); padding:10px 0; margin-top:16px; }
+  .ticker-inner { display:flex; gap:40px; animation:tickerMove 25s linear infinite; white-space:nowrap; }
+  @keyframes tickerMove { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+  .ticker-item { font-size:.7rem; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
+  .ticker-item span { color:var(--cyan); }
+
+  @media(max-width:600px) {
+    .stats-row { grid-template-columns:repeat(2,1fr); }
+    h1 { font-size:1.3rem; letter-spacing:2px; }
+    .pref-row { flex-direction:column; }
+    .status-bar { flex-direction:column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-wrap">
+      <div class="logo-ring"><div class="logo-icon">📡</div></div>
+      <h1>CENT-S Tracker</h1>
+    </div>
+    <div class="subtitle">Real-time seat monitor — <span>24/7 surveillance</span></div>
+  </header>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-left">
+      <div class="dot" id="dot"></div>
+      <span id="status-text" style="font-size:.85rem;letter-spacing:1px">SYSTEM IDLE</span>
+    </div>
+    <div class="mono" id="check-count">CHECKS: —</div>
+    <div style="font-size:.72rem;color:var(--muted)" id="last-check">—</div>
+  </div>
+
+  <!-- SETUP PANEL -->
+  <div class="panel" id="setup-panel">
+    <div class="panel-title">Setup — Get Notified Instantly</div>
+
+    <!-- HOW TO GET CHAT ID -->
+    <div style="margin-bottom:22px;">
+      <div style="font-size:.78rem;color:var(--muted);letter-spacing:1px;margin-bottom:12px;">HOW TO GET YOUR TELEGRAM CHAT ID:</div>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">Open Telegram & search <code>@userinfobot</code></div>
+          <div class="step-desc">Go to <a href="https://t.me/userinfobot" target="_blank">t.me/userinfobot</a> and press <strong>START</strong>.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">Copy your Chat ID</div>
+          <div class="step-desc">The bot replies with your info. Copy the <strong>Id</strong> number (e.g. <code>123456789</code>).</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">Start the notification bot</div>
+          <div class="step-desc">Go to <a href="https://t.me/cents_seat_tracker_bot" target="_blank">@cents_seat_tracker_bot</a> and press <strong>START</strong> — this is mandatory to receive alerts.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <div class="step-title">Enter your Chat ID below & click Start Tracking</div>
+          <div class="step-desc">Choose your preferences and you're done. Alerts arrive on Telegram instantly!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT ID INPUT -->
+    <div class="input-group">
+      <label>Your Telegram Chat ID</label>
+      <input type="text" id="chat-id-input" placeholder="e.g. 123456789" autocomplete="off"/>
+      <div class="hint" id="hint">
+        Get your ID from <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> on Telegram.
+      </div>
+    </div>
+
+    <!-- PREFERENCES -->
+    <div class="input-group">
+      <label>Notify me for</label>
+      <div class="pref-row">
+        <div class="pref-chip selected" id="pref-both" onclick="setPref('both')">
+          <div class="checkmark">✓</div>
+          <div class="pref-chip-label">BOTH</div>
+          <div class="pref-chip-desc">@UNI + @HOME</div>
+        </div>
+        <div class="pref-chip" id="pref-uni" onclick="setPref('uni')">
+          <div class="checkmark">✓</div>
+          <div class="pref-chip-label">@UNI</div>
+          <div class="pref-chip-desc">University only</div>
+        </div>
+        <div class="pref-chip" id="pref-home" onclick="setPref('home')">
+          <div class="checkmark">✓</div>
+          <div class="pref-chip-label">@HOME</div>
+          <div class="pref-chip-desc">Home / Online only</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="start-btn" onclick="startTracking()">⚡ START TRACKING</button>
+  </div>
+
+  <!-- BOT PANEL (shown after registration) -->
+  <div class="panel" id="bot-panel" style="display:none">
+    <div class="panel-title">Telegram Notifications</div>
+    <div class="bot-box">
+      <div class="bot-box-title">📡 NOTIFICATIONS ACTIVE</div>
+      <div class="bot-box-desc">
+        You are registered! The server is monitoring 24/7.<br>
+        Even if you close this page, alerts will still arrive on Telegram.<br><br>
+        <strong>Telegram commands:</strong><br>
+        /both · /uni · /home · /status · /stop
+      </div>
+      <a href="https://t.me/cents_seat_tracker_bot" class="tg-btn" target="_blank">📲 OPEN NOTIFICATION BOT</a>
+    </div>
+  </div>
+
+  <!-- LIVE SECTION -->
+  <div id="live-section" style="display:none">
+    <div class="panel">
+      <div class="panel-title">Live Monitor</div>
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-val" id="stat-checks">—</div>
+          <div class="stat-lbl">Checks Done</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-avail" style="color:var(--green)">—</div>
+          <div class="stat-lbl">Available Now</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-alerts" style="color:var(--orange)">—</div>
+          <div class="stat-lbl">Alerts Sent</div>
+        </div>
+      </div>
+      <div class="panel-title">Available Seats Right Now</div>
+      <div class="seats-grid" id="seats-grid">
+        <div class="no-seats"><div class="icon">🔍</div><div>FETCHING DATA FROM SERVER...</div></div>
+      </div>
+      <button class="btn btn-stop" onclick="stopTracking()">■ UNSUBSCRIBE & STOP</button>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Activity Log</div>
+      <div class="alert-log" id="log"></div>
+    </div>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker">
+    <div class="ticker-inner">
+      <span class="ticker-item">CENT-S <span>SEAT TRACKER</span></span>
+      <span class="ticker-item">MONITORING: <span>TESTCISIA.IT</span></span>
+      <span class="ticker-item">@HOME <span>SEATS</span></span>
+      <span class="ticker-item">@UNI <span>SEATS</span></span>
+      <span class="ticker-item">ALERTS VIA <span>TELEGRAM</span></span>
+      <span class="ticker-item">SERVER CHECK EVERY <span>60 SECONDS</span></span>
+      <span class="ticker-item">CENT-S <span>SEAT TRACKER</span></span>
+      <span class="ticker-item">MONITORING: <span>TESTCISIA.IT</span></span>
+      <span class="ticker-item">@HOME <span>SEATS</span></span>
+      <span class="ticker-item">@UNI <span>SEATS</span></span>
+      <span class="ticker-item">ALERTS VIA <span>TELEGRAM</span></span>
+      <span class="ticker-item">SERVER CHECK EVERY <span>60 SECONDS</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <div class="toast-title">🎯 SEAT AVAILABLE!</div>
+  <div class="toast-body" id="toast-body"></div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+// After deploying on Render, replace this with your actual Render URL
+// e.g. "https://cents-seat-tracker.onrender.com"
+const BACKEND = "https://cents-seat-tracker.onrender.com";
+const BOOKING_URL = "https://testcisia.it/studenti_tolc/login_sso.php";
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let pref = 'both';
+let pollInterval = null;
+let userChatId = '';
+
+// ─── PREF CHIPS ───────────────────────────────────────────────────────────────
+function setPref(val) {
+  pref = val;
+  ['both','uni','home'].forEach(p =>
+    document.getElementById('pref-'+p).classList.toggle('selected', p===val)
+  );
+}
+
+// ─── INPUT LIVE VALIDATION ────────────────────────────────────────────────────
+document.getElementById('chat-id-input').addEventListener('input', function() {
+  const v = this.value.trim();
+  const hint = document.getElementById('hint');
+  this.classList.remove('valid','invalid');
+  if (!v) { hint.innerHTML = 'Get your ID from <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>.'; hint.style.color=''; return; }
+  if (/^-?\d+$/.test(v)) {
+    this.classList.add('valid');
+    hint.innerHTML = '✅ Looks good! Make sure you also started <a href="https://t.me/cents_seat_tracker_bot" target="_blank">@cents_seat_tracker_bot</a>.';
+    hint.style.color = 'var(--green)';
+  } else {
+    this.classList.add('invalid');
+    hint.textContent = '⚠️ Chat ID must be numbers only (can start with - for groups).';
+    hint.style.color = 'var(--red)';
+  }
+});
+
+// ─── START TRACKING ───────────────────────────────────────────────────────────
+async function startTracking() {
+  const input = document.getElementById('chat-id-input');
+  const hint  = document.getElementById('hint');
+  const chatId = input.value.trim();
+
+  if (!chatId || !/^-?\d+$/.test(chatId)) {
+    input.classList.add('invalid');
+    hint.textContent = '⚠️ Please enter a valid numeric Chat ID.';
+    hint.style.color = 'var(--red)';
+    return;
+  }
+
+  userChatId = chatId;
+  const btn = document.getElementById('start-btn');
+  btn.disabled = true;
+  btn.textContent = 'REGISTERING...';
+  setStatus('warning','CONNECTING TO SERVER...');
+
+  try {
+    const resp = await fetch(`${BACKEND}/api/register`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ chat_id: chatId, pref })
+    });
+    const data = await resp.json();
+
+    if (!data.ok) throw new Error(data.error || 'Registration failed');
+
+    btn.textContent = '✓ TRACKING ACTIVE';
+    setStatus('active','SERVER MONITORING ACTIVE');
+    addLog('info','✅ Registered! Server is now watching for seats 24/7.');
+
+    document.getElementById('bot-panel').style.display = 'block';
+    document.getElementById('live-section').style.display = 'block';
+    document.getElementById('setup-panel').style.opacity = '0.6';
+
+    // Start polling status from backend
+    await pollStatus();
+    pollInterval = setInterval(pollStatus, 15000);
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '⚡ START TRACKING';
+    setStatus('error','CONNECTION FAILED');
+    hint.textContent = '⚠️ Cannot reach server. Make sure backend is deployed on Render.';
+    hint.style.color = 'var(--red)';
+    addLog('err', '❌ Error: ' + e.message);
+  }
+}
+
+// ─── POLL SERVER STATUS ───────────────────────────────────────────────────────
+async function pollStatus() {
+  try {
+    const resp = await fetch(`${BACKEND}/api/status`);
+    const d    = await resp.json();
+
+    document.getElementById('stat-checks').textContent = d.checks ?? '—';
+    document.getElementById('stat-avail').textContent  = d.available_now?.length ?? '—';
+    document.getElementById('stat-alerts').textContent = d.alerts_sent ?? '—';
+    document.getElementById('check-count').textContent = `CHECKS: ${d.checks ?? '—'}`;
+    document.getElementById('last-check').textContent  = d.last_check ? 'LAST: '+d.last_check : '—';
+
+    renderSeats(d.available_now || []);
+    setStatus('active','SERVER MONITORING ACTIVE');
+
+    if ((d.available_now || []).length > 0) {
+      addLog('found', `✅ ${d.available_now.length} available slot(s) detected on server!`);
+    }
+  } catch(e) {
+    setStatus('warning','SERVER UNREACHABLE');
+    addLog('err','⚠️ Cannot reach backend — ' + e.message);
+  }
+}
+
+// ─── RENDER SEAT CARDS ────────────────────────────────────────────────────────
+function renderSeats(seats) {
+  // Filter by user pref
+  const filtered = seats.filter(s => {
+    if (pref === 'uni')  return s.is_uni;
+    if (pref === 'home') return s.is_home;
+    return true;
+  });
+
+  const grid = document.getElementById('seats-grid');
+  if (!filtered.length) {
+    grid.innerHTML = `
+      <div class="no-seats">
+        <div class="icon">🔍</div>
+        <div>NO AVAILABLE SEATS RIGHT NOW</div>
+        <div style="margin-top:8px;font-size:.7rem">Server is monitoring continuously — Telegram alert arrives the moment seats open</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(s => {
+    const isUni = s.is_uni;
+    return `
+      <div class="seat-card available">
+        <div class="seat-info">
+          <div class="seat-format ${isUni?'uni':'home'}">${s.format}</div>
+          <div class="seat-uni">${s.uni}</div>
+          <div class="seat-meta">${s.city} · ${s.region} · Test: ${s.date} · Deadline: ${s.deadline}</div>
+          <a href="${BOOKING_URL}" target="_blank" class="book-btn">🔗 BOOK NOW</a>
+        </div>
+        <div class="seat-right">
+          <div class="seat-count">${s.seats}</div>
+          <div class="seat-label">SEATS</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Show toast for first available
+  showToast(`${filtered[0].format} — ${filtered[0].uni} — ${filtered[0].seats} seats`);
+}
+
+// ─── STOP TRACKING ────────────────────────────────────────────────────────────
+async function stopTracking() {
+  clearInterval(pollInterval);
+  if (userChatId) {
+    try {
+      await fetch(`${BACKEND}/api/unregister`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({chat_id: userChatId})
+      });
+    } catch(e) {}
+  }
+  document.getElementById('live-section').style.display = 'none';
+  document.getElementById('bot-panel').style.display = 'none';
+  document.getElementById('setup-panel').style.opacity = '1';
+  const btn = document.getElementById('start-btn');
+  btn.disabled = false;
+  btn.textContent = '⚡ START TRACKING';
+  document.getElementById('chat-id-input').classList.remove('valid','invalid');
+  setStatus('idle','SYSTEM IDLE');
+  addLog('info','Tracking stopped.');
+  userChatId = '';
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function setStatus(type, text) {
+  const dot = document.getElementById('dot');
+  dot.className = 'dot';
+  if (type==='active')  dot.classList.add('active');
+  if (type==='warning') dot.classList.add('warning');
+  if (type==='error')   dot.classList.add('error');
+  document.getElementById('status-text').textContent = text;
+}
+
+function addLog(type, msg) {
+  const log = document.getElementById('log');
+  const t   = new Date().toLocaleTimeString();
+  const el  = document.createElement('div');
+  el.className = `log-entry ${type}`;
+  el.innerHTML = `<span class="log-time">${t}</span><span class="log-msg">${msg}</span>`;
+  log.prepend(el);
+  while (log.children.length > 50) log.removeChild(log.lastChild);
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-body').textContent = msg;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 6000);
+}
+</script>
+</body>
+</html>
