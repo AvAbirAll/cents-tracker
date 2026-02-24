@@ -13,7 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 BOT_TOKEN   = "8614297250:AAFonU98gkZygF9b1T17J1GdI_8OwmOfOb8"
 SOURCE_URL  = "https://testcisia.it/calendario.php?tolc=cents&l=gb&lingua=inglese"
 BOOKING_URL = "https://testcisia.it/studenti_tolc/login_sso.php"
-CHECK_EVERY = 60  # seconds
+CHECK_EVERY = 1  # seconds
 
 # ─── LOGGING ──────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -314,4 +314,4 @@ if __name__ == "__main__":
     threading.Thread(target=check_job, daemon=True).start()
 
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, use_reloader=Fasle)
