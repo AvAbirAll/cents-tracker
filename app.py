@@ -13,7 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 BOT_TOKEN   = "8614297250:AAFonU98gkZygF9b1T17J1GdI_8OwmOfOb8"
 SOURCE_URL  = "https://testcisia.it/calendario.php?tolc=cents&l=gb&lingua=inglese"
 BOOKING_URL = "https://testcisia.it/studenti_tolc/login_sso.php"
-CHECK_EVERY = 60  # seconds
+CHECK_EVERY = 1  # seconds
 
 # ─── LOGGING ──────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
