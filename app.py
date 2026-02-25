@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 BOT_TOKEN   = "8614297250:AAFonU98gkZygF9b1T17J1GdI_8OwmOfOb8"
 SOURCE_URL  = "https://testcisia.it/calendario.php?tolc=cents&l=gb&lingua=inglese"
 BOOKING_URL = "https://testcisia.it/studenti_tolc/login_sso.php"
-INTERVAL    = 30  # seconds between checks
+INTERVAL    = 5  # seconds between checks
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger(__name__)
